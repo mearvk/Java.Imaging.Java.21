@@ -40,13 +40,13 @@ public class Main
 
     static ArrayList<String> sorted_file_names = new ArrayList<String>();
 
-    static ArrayList<File> image_files = new ArrayList<File>();
+    static ArrayList<File> image_and_video_files = new ArrayList<File>();
 
     public static void main(String...args)
     {
         Object object = null;
 
-        try{ System.setOut(new PrintStream(new FileOutputStream(std_output_directory))); } catch (Exception e) {}
+        //try{ System.setOut(new PrintStream(new FileOutputStream(std_output_directory))); } catch (Exception e) {}
 
         try{ System.setErr(new PrintStream(new FileOutputStream(err_output_directory))); } catch (Exception e) {}
 
@@ -56,7 +56,7 @@ public class Main
 
         ImageOpener opener = new ImageOpener(Main.initial_directory);
 
-        ImageSorter sorter = new ImageSorter(Main.image_files);
+        ImageSorter sorter = new ImageSorter(Main.image_and_video_files);
 
         sorter.collection();
 
@@ -81,7 +81,7 @@ public class Main
 
                     Iterable <Directory> directories =  data.getDirectories();
 
-                    System.out.println("File name >> "+image.getAbsolutePath());
+                    //System.out.println("File name >> "+image.getAbsolutePath());
 
                     for(Directory directory : directories)
                     {
@@ -112,7 +112,7 @@ public class Main
 
             for(int i=0; i<number_of_files; i++)
             {
-                String file_name = String.format("file_%09d.jpg", i);
+                String file_name = String.format("file_%5d.jpg", i);
 
                 names.add(file_name);
             }
@@ -161,7 +161,9 @@ public class Main
 
                     System.out.println(Path.of(file.getParent()+"/"+Main.sorted_file_names.get(iterator)));
 
-                    //Files.copy(file.toPath(), Path.of(file.getParent()+"/"+Main.sorted_file_names.get(iterator)));
+                    Files.copy(file.toPath(), Path.of(file.getParent()+"/"+Main.sorted_file_names.get(iterator)));
+
+                    Files.delete(file.toPath());
 
                     iterator++;
                 }
@@ -193,7 +195,7 @@ public class Main
 
                         Files.copy(file.getAbsoluteFile().toPath(), Path.of(Main.mov_destination + "/" + file.getName()));
 
-                        //Files.delete(file.getAbsoluteFile().toPath());
+                        Files.delete(file.getAbsoluteFile().toPath());
                     }
                     catch (Exception e)
                     {
@@ -212,7 +214,7 @@ public class Main
 
                             Files.copy(file.getAbsoluteFile().toPath(), Path.of(Main.mp4_destination + "/" + file.getName()));
 
-                            //Files.delete(file.getAbsoluteFile().toPath());
+                            Files.delete(file.getAbsoluteFile().toPath());
                         }
                         catch (Exception e)
                         {
@@ -225,7 +227,7 @@ public class Main
                 }
                 else
                 {
-                    Main.image_files.add(file);
+                    Main.image_and_video_files.add(file);
                 }
             }
         }
