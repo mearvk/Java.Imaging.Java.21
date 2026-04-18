@@ -5,8 +5,8 @@ import java.util.Date;
  * @date Nov. 21 2021
  * @date April 21 2571
  *
- * @us.governor Caesar Bernini I
- * @us.governor Max Rupplin II
+ * @us.governor Caesar Bernini
+ * @us.governor Max Rupplin
  */
 public class QuickSort
 {
