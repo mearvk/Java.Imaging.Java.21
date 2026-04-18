@@ -11,7 +11,9 @@ import com.mearvk.metadata.exif.MetadataReader;
 import com.mearvk.metadata.Directory;
 import com.mearvk.metadata.Metadata;
 import com.mearvk.metadata.Tag;
+import com.mearvk.imaging.FileTypeDetector;
 
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.io.File;
@@ -36,17 +38,17 @@ public class Main
 
     static final String mp4_destination = "/home/mearvk/Desktop/Videos/MP4s";
 
-    static HashMap<File, Date> sorted_dates_v_files = new HashMap<File,Date>();
+    static ArrayList<File> image_and_video_files = new ArrayList<>();
 
-    static ArrayList<String> sorted_file_names = new ArrayList<String>();
+    static ArrayList<ImageSorter.ImageCollection> image_collection = new ArrayList<>();
 
-    static ArrayList<File> image_and_video_files = new ArrayList<File>();
+    static ArrayList<ImageSorter.ImageCollection> image_collection_sorted = new ArrayList<>();
 
     public static void main(String...args)
     {
         Object object = null;
 
-        //try{ System.setOut(new PrintStream(new FileOutputStream(std_output_directory))); } catch (Exception e) {}
+        try{ System.setOut(new PrintStream(new FileOutputStream(std_output_directory))); } catch (Exception e) {}
 
         try{ System.setErr(new PrintStream(new FileOutputStream(err_output_directory))); } catch (Exception e) {}
 
@@ -56,7 +58,7 @@ public class Main
 
         ImageOpener opener = new ImageOpener(Main.initial_directory);
 
-        ImageSorter sorter = new ImageSorter(Main.image_and_video_files);
+        ImageSorter sorter = new ImageSorter(Main.image_collection);
 
         sorter.collection();
 
@@ -67,21 +69,76 @@ public class Main
 
     public static class ImageSorter
     {
-        public ArrayList<File> images = new ArrayList<File>();
+        public ArrayList<ImageCollection> image_collection = new ArrayList<ImageCollection>();
 
-        public ImageSorter(ArrayList<File> images)
+        public static class Date implements Comparable<Date>
         {
-            this.images = images;
+            protected java.util.Date date;
 
-            for (File image : this.images)
+            public Date(java.util.Date date)
+            {
+                this.date = date;
+            }
+
+            protected String next_file_name;
+
+            protected File next_file;
+
+            @Override
+            public int compareTo(Date date)
+            {
+                return this.date.compareTo(date.date);
+            }
+        }
+
+        public static class ImageCollection
+        {
+            protected String file_name;
+
+            protected File file;
+
+            protected Date file_date;
+
+            protected java.util.Date _file_date;
+
+            public ImageCollection(String file_name, File file, Date file_date)
+            {
+                this.file_name = file_name;
+
+                this.file = file;
+
+                this.file_date = file_date;
+            }
+
+            public ImageCollection(String file_name, File file, java.util.Date file_date)
+            {
+                this.file_name = file_name;
+
+                this.file = file;
+
+                this._file_date = file_date;
+            }
+        }
+
+        public ImageSorter(ArrayList<ImageCollection> image_collection)
+        {
+            this.image_collection = this.image_collection;
+
+            for (ImageCollection collection : this.image_collection)
             {
                 try
                 {
-                    Metadata data = ImageMetadataReader.readMetadata(image);
+                    File file = collection.file;
+
+                    String file_name = collection.file_name;
+
+                    Date file_date = collection.file_date;
+
+                    Metadata data = ImageMetadataReader.readMetadata(file);
 
                     Iterable <Directory> directories =  data.getDirectories();
 
-                    //System.out.println("File name >> "+image.getAbsolutePath());
+                    System.out.println("File name >> "+file.getAbsolutePath());
 
                     for(Directory directory : directories)
                     {
@@ -104,68 +161,79 @@ public class Main
 
         public void collection()
         {
-            ArrayList<String> names = new ArrayList<String>();
-
-            HashMap<File, Date> dates = new HashMap<File, Date>();
-
-            Integer number_of_files = this.images.size();
-
-            for(int i=0; i<number_of_files; i++)
-            {
-                String file_name = String.format("file_%5d.jpg", i);
-
-                names.add(file_name);
-            }
+            Integer number_of_files = this.image_collection.size();
 
             for(int i=0; i<number_of_files; i++)
             {
                 try
                 {
-                    Metadata data = ImageMetadataReader.readMetadata(this.images.get(i));
+                    Metadata data = ImageMetadataReader.readMetadata(this.image_collection.get(i).file);
 
                     MetadataReader reader = data.getFirstDirectoryOfType(MetadataReader.class);
 
-                    Date date = reader.getDate(MetadataReader.TAG_DATETIME_ORIGINAL);
+                    java.util.Date file_date = reader.getDate(MetadataReader.TAG_DATETIME_ORIGINAL);
 
-                    dates.put(this.images.get(i), date);
+                    String file_name = "iPhone_13_file_"+new SimpleDateFormat("dd-MM-yyyy").format(file_date)+".jpg";
+
+                    Main.image_collection.add(new ImageCollection(file_name, this.image_collection.get(i).file, file_date));
                 }
                 catch (Exception e)
                 {
                     e.printStackTrace(System.err);
                 }
             }
-
-            Main.sorted_file_names = names;
-
-            Main.sorted_dates_v_files = dates;
         }
 
         public void sort()
         {
-            TreeMap<File, Date> sorted_map = new TreeMap<>(Collections.reverseOrder());
+            ArrayList<Date> sorted_dates = new ArrayList<>();
 
-            sorted_map.putAll(Main.sorted_dates_v_files);
+            for(int i=0; i<Main.image_collection.size(); i++)
+            {
+                ImageCollection collection = Main.image_collection.get(i);
+
+                Date file_date = collection.file_date;
+
+                file_date.next_file_name = collection.file_name;
+
+                file_date.next_file = collection.file;
+
+                sorted_dates.add(file_date);
+            }
+
+            Collections.sort(sorted_dates);
+
+            for(int i=0; i<sorted_dates.size(); i++)
+            {
+                ImageCollection collection = Main.image_collection.get(i);
+
+                Date date = sorted_dates.get(i);
+
+                collection.file_date = date;
+
+                collection.file = date.next_file;
+
+                collection.file_name = date.next_file_name;
+
+                Main.image_collection_sorted.add(collection);
+            }
         }
 
         public void finalize()
         {
-            Integer iterator = 0;
-
             try
             {
-                for(HashMap.Entry<File, Date> entry : Main.sorted_dates_v_files.entrySet())
+                for(ImageCollection collection : Main.image_collection_sorted)
                 {
-                    File file = entry.getKey();
+                    File file = collection.file;
 
-                    Date date = entry.getValue();
+                    String file_name = collection.file_name;
 
-                    System.out.println(Path.of(file.getParent()+"/"+Main.sorted_file_names.get(iterator)));
+                    System.out.println(Path.of(file.getParent()+"/"+file_name));
 
-                    Files.copy(file.toPath(), Path.of(file.getParent()+"/"+Main.sorted_file_names.get(iterator)));
+                    Files.copy(file.toPath(), Path.of(file.getParent()+"/"+file_name));
 
                     Files.delete(file.toPath());
-
-                    iterator++;
                 }
             }
             catch (Exception e)
@@ -191,7 +259,7 @@ public class Main
                 {
                     try
                     {
-                        System.out.println("Moving >> " + file.getAbsolutePath());
+                        System.out.println("Moving [MOV] >> " + file.getAbsolutePath());
 
                         Files.copy(file.getAbsoluteFile().toPath(), Path.of(Main.mov_destination + "/" + file.getName()));
 
@@ -210,7 +278,7 @@ public class Main
                 {
                         try
                         {
-                            System.out.println("Moving >> " + file.getAbsolutePath());
+                            System.out.println("Moving [MP4] >> " + file.getAbsolutePath());
 
                             Files.copy(file.getAbsoluteFile().toPath(), Path.of(Main.mp4_destination + "/" + file.getName()));
 
