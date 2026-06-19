@@ -6,11 +6,17 @@ import java.io.File;
 import java.util.*;
 
 /**
- * Reads config.xml for all application settings.
+ * Reads config.xml and resolves {USER} and {HOME} placeholders based on OS.
+ *
+ * Resolved paths:
+ *   Linux:  /home/{USER}/...
+ *   macOS:  /Users/{USER}/...
+ *   Windows: C:\Users\{USER}\...
  */
 public class XMLHandler
 {
     private String user;
+    private String home;
     private String source;
     private String imagesDestination;
     private final Map<String, String> videoSubfolders = new LinkedHashMap<>();
@@ -30,9 +36,12 @@ public class XMLHandler
             .newDocumentBuilder().parse(new File(xmlPath));
         doc.getDocumentElement().normalize();
 
-        user = getText(doc, "user");
-        source = getText(doc, "source");
-        imagesDestination = getNestedText(doc, "destinations", "images");
+        // Resolve user and home directory based on OS
+        user = System.getProperty("user.name");
+        home = System.getProperty("user.home");
+
+        source = resolve(getText(doc, "source"));
+        imagesDestination = resolve(getNestedText(doc, "destinations", "images"));
 
         // Video subfolders
         NodeList destNodes = doc.getElementsByTagName("destinations");
@@ -47,7 +56,7 @@ public class XMLHandler
                 {
                     Node n = children.item(i);
                     if (n.getNodeType() == Node.ELEMENT_NODE)
-                        videoSubfolders.put("." + n.getNodeName(), n.getTextContent().trim());
+                        videoSubfolders.put("." + n.getNodeName(), resolve(n.getTextContent().trim()));
                 }
             }
         }
@@ -64,7 +73,7 @@ public class XMLHandler
         }
 
         // Security
-        localPublicKey = getNestedText(doc, "security", "local-public-key");
+        localPublicKey = resolve(getNestedText(doc, "security", "local-public-key"));
         remotePublicKey = getNestedText(doc, "security", "remote-public-key");
 
         // Entertainment
@@ -81,7 +90,17 @@ public class XMLHandler
         }
     }
 
+    /**
+     * Replaces {USER} and {HOME} placeholders with OS-appropriate values.
+     */
+    private String resolve(String value)
+    {
+        if (value == null) return null;
+        return value.replace("{USER}", user).replace("{HOME}", home);
+    }
+
     public String getUser() { return user; }
+    public String getHome() { return home; }
     public String getSource() { return source; }
     public String getImagesDestination() { return imagesDestination; }
     public Map<String, String> getVideoSubfolders() { return videoSubfolders; }

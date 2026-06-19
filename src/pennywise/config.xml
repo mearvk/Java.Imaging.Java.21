@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-    <user>mearvk</user>
+    <user>{USER}</user>
 
-    <source>C:\Users\mearvk\Desktop\Photos</source>
+    <!-- Paths use {USER} placeholder, resolved at runtime per OS -->
+    <source>{HOME}/Desktop/Photos</source>
 
     <destinations>
-        <images>C:\Users\mearvk\Desktop\Organized\Images</images>
+        <images>{HOME}/Desktop/Organized/Images</images>
         <videos>
-            <mov>C:\Users\mearvk\Desktop\Organized\Videos\MOVs</mov>
-            <mp4>C:\Users\mearvk\Desktop\Organized\Videos\MP4s</mp4>
-            <mpeg>C:\Users\mearvk\Desktop\Organized\Videos\MPEGs</mpeg>
-            <avi>C:\Users\mearvk\Desktop\Organized\Videos\AVIs</avi>
+            <mov>{HOME}/Desktop/Organized/Videos/MOVs</mov>
+            <mp4>{HOME}/Desktop/Organized/Videos/MP4s</mp4>
+            <mpeg>{HOME}/Desktop/Organized/Videos/MPEGs</mpeg>
+            <avi>{HOME}/Desktop/Organized/Videos/AVIs</avi>
         </videos>
     </destinations>
 
