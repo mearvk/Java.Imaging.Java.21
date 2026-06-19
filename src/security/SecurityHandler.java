@@ -1,3 +1,11 @@
+/**
+ * Validates local public key against remote GitHub-hosted key.
+ *
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package security;
 
 import java.io.*;

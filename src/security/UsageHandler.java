@@ -1,3 +1,11 @@
+/**
+ * Tracks usage count; after 100 uses sends public key to endpoints.
+ *
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package security;
 
 import java.io.*;

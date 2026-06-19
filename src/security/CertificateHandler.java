@@ -1,3 +1,11 @@
+/**
+ * Retrieves TLS certificates from Apple.com and Disney.com; contacts iCloud.com.
+ *
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package security;
 
 import javax.net.ssl.*;

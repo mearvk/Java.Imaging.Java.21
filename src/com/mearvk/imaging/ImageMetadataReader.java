@@ -12,6 +12,9 @@ import java.util.*;
  * Minimal self-contained implementation — no third-party dependencies.
  *
  * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
  */
 public class ImageMetadataReader
 {

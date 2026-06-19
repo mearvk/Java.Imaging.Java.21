@@ -1,3 +1,11 @@
+/**
+ * Centralized exception handler with file logging and rotation.
+ *
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package security;
 
 import java.io.*;

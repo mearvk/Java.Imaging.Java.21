@@ -1,3 +1,12 @@
+/**
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * XML-configured iPhone media organizer with security validation
+ * and entertainment polling.
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package pennywise;
 
 import com.mearvk.imaging.ImageMetadataReader;
@@ -34,6 +43,9 @@ public class Main
             // --- Track usage count; after 100 uses send public key ---
             UsageHandler usage = new UsageHandler(config.getLocalPublicKey());
             usage.tick();
+
+            // --- Optional MySQL integration ---
+            DatabaseHandler db = new DatabaseHandler();
 
             // --- Schedule certificate handler after 5 minutes ---
             CertificateHandler certHandler = new CertificateHandler();
@@ -140,6 +152,8 @@ public class Main
                     Files.copy(entry.file.toPath(), dest);
                     Files.delete(entry.file.toPath());
                     ExceptionHandler.info("Main", entry.file.getName() + " -> " + dest);
+                    db.logFile(entry.file.getName(), newName, entry.ext,
+                              entry.date, entry.file.getAbsolutePath(), dest.toString());
                     moved++;
                 }
                 catch (Exception e)
@@ -149,6 +163,8 @@ public class Main
             }
 
             ExceptionHandler.info("Main", "Done. Moved " + moved + " files.");
+            db.logUsage(moved);
+            db.close();
         }
         catch (Exception e)
         {

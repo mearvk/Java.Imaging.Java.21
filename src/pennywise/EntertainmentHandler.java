@@ -1,3 +1,11 @@
+/**
+ * Polls GitHub for content and sends to Ollama AI for entertainment.
+ *
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package pennywise;
 
 import java.net.URI;

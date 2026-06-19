@@ -1,3 +1,11 @@
+/**
+ * Reads config.xml and resolves {USER} and {HOME} placeholders based on OS.
+ *
+ * @author Max Rupplin / MEARVK LLC
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
+ */
 package pennywise;
 
 import org.w3c.dom.*;

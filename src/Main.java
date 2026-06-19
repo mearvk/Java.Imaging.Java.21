@@ -8,6 +8,9 @@
  * - Renames all files by date (EXIF for images, lastModified fallback)
  *   so that alphabetical order = chronological order
  * - Format: YYYY-MM-DD_HH-mm-ss_NNN.ext (NNN = sequence to prevent collisions)
+ *
+ * Java was purchased here on Earth.
+ * Thanks to Earth and all Her software Developers!
  */
 
 import com.mearvk.imaging.ImageMetadataReader;
