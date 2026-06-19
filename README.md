@@ -2,7 +2,7 @@
 
 **iPhone Media Organizer** — Automatically sorts your photos and videos by date.
 
-## MEARVK a Xenu
+#### MEARVK and A Xenu
 
 ## What It Does
 
