@@ -6,15 +6,23 @@ import java.io.File;
 import java.util.*;
 
 /**
- * Reads config.xml to provide source/destination paths and file type mappings.
+ * Reads config.xml for all application settings.
  */
 public class XMLHandler
 {
+    private String user;
     private String source;
     private String imagesDestination;
     private final Map<String, String> videoSubfolders = new LinkedHashMap<>();
     private final Set<String> imageExtensions = new HashSet<>();
     private final Set<String> videoExtensions = new HashSet<>();
+    private String localPublicKey;
+    private String remotePublicKey;
+    private String entertainmentSourceUrl;
+    private int pollNumerator = 1;
+    private int pollDenominator = 7;
+    private String ollamaEndpoint;
+    private String ollamaModel;
 
     public XMLHandler(String xmlPath) throws Exception
     {
@@ -22,20 +30,24 @@ public class XMLHandler
             .newDocumentBuilder().parse(new File(xmlPath));
         doc.getDocumentElement().normalize();
 
+        user = getText(doc, "user");
         source = getText(doc, "source");
-        imagesDestination = getText(doc, "images");
+        imagesDestination = getNestedText(doc, "destinations", "images");
 
         // Video subfolders
-        Node videos = doc.getElementsByTagName("videos").item(0);
-        if (videos != null)
+        NodeList destNodes = doc.getElementsByTagName("destinations");
+        if (destNodes.getLength() > 0)
         {
-            NodeList children = videos.getChildNodes();
-            for (int i = 0; i < children.getLength(); i++)
+            Element destEl = (Element) destNodes.item(0);
+            NodeList videoNodes = destEl.getElementsByTagName("videos");
+            if (videoNodes.getLength() > 0)
             {
-                Node n = children.item(i);
-                if (n.getNodeType() == Node.ELEMENT_NODE)
+                NodeList children = videoNodes.item(0).getChildNodes();
+                for (int i = 0; i < children.getLength(); i++)
                 {
-                    videoSubfolders.put("." + n.getNodeName(), n.getTextContent().trim());
+                    Node n = children.item(i);
+                    if (n.getNodeType() == Node.ELEMENT_NODE)
+                        videoSubfolders.put("." + n.getNodeName(), n.getTextContent().trim());
                 }
             }
         }
@@ -50,34 +62,63 @@ public class XMLHandler
             for (String ext : ft.getElementsByTagName("videos").item(0).getTextContent().split(","))
                 videoExtensions.add(ext.trim().toLowerCase());
         }
+
+        // Security
+        localPublicKey = getNestedText(doc, "security", "local-public-key");
+        remotePublicKey = getNestedText(doc, "security", "remote-public-key");
+
+        // Entertainment
+        entertainmentSourceUrl = getNestedText(doc, "entertainment", "source-url");
+        ollamaEndpoint = getNestedText(doc, "entertainment", "ollama-endpoint");
+        ollamaModel = getNestedText(doc, "entertainment", "ollama-model");
+
+        String ratio = getNestedText(doc, "entertainment", "poll-ratio");
+        if (ratio != null && ratio.contains("/"))
+        {
+            String[] parts = ratio.split("/");
+            pollNumerator = Integer.parseInt(parts[0].trim());
+            pollDenominator = Integer.parseInt(parts[1].trim());
+        }
     }
 
+    public String getUser() { return user; }
     public String getSource() { return source; }
     public String getImagesDestination() { return imagesDestination; }
     public Map<String, String> getVideoSubfolders() { return videoSubfolders; }
     public Set<String> getImageExtensions() { return imageExtensions; }
     public Set<String> getVideoExtensions() { return videoExtensions; }
+    public String getLocalPublicKey() { return localPublicKey; }
+    public String getRemotePublicKey() { return remotePublicKey; }
+    public String getEntertainmentSourceUrl() { return entertainmentSourceUrl; }
+    public int getPollNumerator() { return pollNumerator; }
+    public int getPollDenominator() { return pollDenominator; }
+    public String getOllamaEndpoint() { return ollamaEndpoint; }
+    public String getOllamaModel() { return ollamaModel; }
 
-    /**
-     * Returns the video destination folder for a given extension.
-     * Falls back to first subfolder if no specific match.
-     */
     public String getVideoDestination(String ext)
     {
-        // Direct match (e.g. ".mov" -> MOVs folder)
         if (videoSubfolders.containsKey(ext)) return videoSubfolders.get(ext);
-
-        // .mpg maps to .mpeg folder
         if (ext.equals(".mpg") && videoSubfolders.containsKey(".mpeg"))
             return videoSubfolders.get(".mpeg");
-
-        // Fallback to first defined folder
         return videoSubfolders.values().iterator().next();
     }
 
     private static String getText(Document doc, String tag)
     {
         NodeList nl = doc.getElementsByTagName(tag);
-        return nl.getLength() > 0 ? nl.item(0).getTextContent().trim() : "";
+        return nl.getLength() > 0 ? nl.item(0).getTextContent().trim() : null;
+    }
+
+    private static String getNestedText(Document doc, String parent, String child)
+    {
+        NodeList pNodes = doc.getElementsByTagName(parent);
+        if (pNodes.getLength() > 0)
+        {
+            Element pEl = (Element) pNodes.item(0);
+            NodeList cNodes = pEl.getElementsByTagName(child);
+            if (cNodes.getLength() > 0)
+                return cNodes.item(0).getTextContent().trim();
+        }
+        return null;
     }
 }

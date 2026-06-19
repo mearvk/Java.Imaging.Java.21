@@ -9,3 +9,5 @@ Owner of Miramax Films UK & US United States and Settlement - NO GODZILLA
 Owner of Del Taco in Apple Valley, CA '95
 
 ![Profile views](https://views.igorkowalczyk.dev/api/badge/@mearvk?style=flat)
+
+KEEP IT UP GUYS! Your Shots Count!

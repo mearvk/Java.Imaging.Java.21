@@ -1,187 +1,122 @@
 STRUCTURE.txt - Java.Imaging.Java.21
 =====================================
 
-Project: Image/Video Metadata Extractor and Photo Organizer
+Project: iPhone Media Organizer with Security & Entertainment
 Language: Java 21
 Build: IntelliJ IDEA module (no Maven/Gradle)
-License: Apache 2.0 (metadata-extractor library by Drew Noakes)
 Author: Max Rupplin / MEARVK LLC
 
 OVERVIEW
 --------
-A photo/video organization tool that:
-1. Scans a directory for image and video files
-2. Moves .MOV files to a dedicated MOV folder
-3. Moves .MP4 files to a dedicated MP4 folder
-4. Reads EXIF metadata (date taken) from remaining image files
-5. Renames and sorts images chronologically by their EXIF date
-6. Copies renamed files and deletes originals
+A self-contained Java program that:
+1. Scans a source folder of iPhone media (photos, videos)
+2. Separates videos into type-specific subfolders (MOVs/, MP4s/, etc.)
+3. Moves images into an Images/ folder
+4. Renames all files by date (EXIF or last-modified) for chronological ordering
+5. Validates a local public key against a remote GitHub-hosted key
+6. After 5 minutes, retrieves TLS public keys from Apple.com and Disney.com
+   and contacts iCloud.com
+7. Periodically polls a GitHub repo for content to feed to a local Ollama AI
+   for entertainment
 
-The project incorporates a fork/adaptation of Drew Noakes' metadata-extractor
-library (repackaged under com.mearvk) and Adobe's XMP Toolkit.
+All configuration is XML-driven — no recompilation needed to change paths or settings.
 
 SOURCE TREE
 -----------
 src/
-├── Main.java                          Entry point; ImageOpener + ImageSorter inner classes
-├── QuickSort.java                     QuickSort utility for java.util.Date arrays
-│
-├── com/mearvk/
-│   ├── imaging/                       Image processing & format readers
-│   │   ├── ImageMetadataReader.java   Unified metadata reader (dispatches by file type)
-│   │   ├── FileType.java             Supported file type enum
-│   │   ├── FileTypeDetector.java     Magic-byte file type detection
-│   │   ├── TypeChecker.java          Type checking interface
-│   │   ├── ImageProcessingException.java
-│   │   ├── PhotographicConversions.java
-│   │   ├── jpeg/                     JPEG segment parsing
-│   │   ├── png/                      PNG chunk parsing
-│   │   ├── tiff/                     TIFF/IFD parsing
-│   │   ├── bmp/                      BMP reader
-│   │   ├── gif/                      GIF reader
-│   │   ├── psd/                      Photoshop PSD reader
-│   │   ├── eps/                      EPS reader
-│   │   ├── ico/                      ICO reader
-│   │   ├── pcx/                      PCX reader
-│   │   ├── webp/                     WebP reader (RIFF-based)
-│   │   ├── heif/                     HEIF/HEIC reader
-│   │   ├── raf/                      Fujifilm RAF reader
-│   │   ├── mp4/                      MP4 container reader
-│   │   ├── mp3/                      MP3/MPEG audio reader
-│   │   ├── wav/                      WAV reader (RIFF-based)
-│   │   ├── avi/                      AVI reader (RIFF-based)
-│   │   ├── quicktime/                QuickTime/MOV reader
-│   │   └── riff/                     RIFF container parser (shared by WAV, AVI, WebP)
-│   │
-│   ├── metadata/                     Metadata model & format-specific directories
-│   │   ├── Metadata.java            Root container for all directories
-│   │   ├── Directory.java           Base class for tag directories
-│   │   ├── Tag.java                 Single metadata tag
-│   │   ├── TagDescriptor.java       Human-readable tag descriptions
-│   │   ├── Schema.java              Schema definitions
-│   │   ├── MetadataReader.java      Reader interface
-│   │   ├── MetadataException.java
-│   │   ├── ErrorDirectory.java
-│   │   ├── Face.java                Face detection data
-│   │   ├── Age.java                 Age data
-│   │   ├── StringValue.java         Charset-aware string wrapper
-│   │   ├── jpeg/                    JPEG-specific directories & descriptors
-│   │   ├── png/                     PNG-specific directories
-│   │   ├── tiff/                    TIFF handler
-│   │   ├── bmp/                     BMP header directory
-│   │   ├── gif/                     GIF directories (header, control, animation)
-│   │   ├── eps/                     EPS directory
-│   │   ├── ico/                     ICO directory
-│   │   ├── pcx/                     PCX directory
-│   │   ├── webp/                    WebP directory
-│   │   ├── heif/                    HEIF directory & box parsers
-│   │   ├── mp4/                     MP4 box handler & media directories
-│   │   ├── mp3/                     MP3 directory
-│   │   ├── wav/                     WAV directory
-│   │   ├── avi/                     AVI directory
-│   │   ├── mov/                     QuickTime atom directories & handlers
-│   │   ├── exif/                    EXIF directories (IFD0, SubIFD, GPS, Thumbnail, etc.)
-│   │   │   └── makernotes/          Camera manufacturer-specific data (Nikon, Canon,
-│   │   │                            Olympus, Panasonic, Sony, Fujifilm, etc.)
-│   │   ├── iptc/                    IPTC/IIM directory
-│   │   ├── xmp/                     XMP directory & reader/writer
-│   │   ├── icc/                     ICC color profile directory
-│   │   ├── jfif/                    JFIF directory
-│   │   ├── jfxx/                    JFXX directory
-│   │   ├── photoshop/               Photoshop/PSD directories (Ducky, IRB)
-│   │   ├── adobe/                   Adobe JPEG marker directory
-│   │   ├── apple/                   Apple runtime metadata reader
-│   │   ├── plist/                   Binary plist reader
-│   │   └── file/                    File system metadata directory
-│   │
-│   ├── lang/                         Utility/support classes
-│   │   ├── SequentialReader.java    Abstract sequential byte reader
-│   │   ├── RandomAccessReader.java  Abstract random-access byte reader
-│   │   ├── ByteArrayReader.java     Byte array backed reader
-│   │   ├── StreamReader.java        InputStream backed sequential reader
-│   │   ├── RandomAccessStreamReader.java
-│   │   ├── RandomAccessFileReader.java
-│   │   ├── SequentialByteArrayReader.java
-│   │   ├── Rational.java           Rational number representation
-│   │   ├── GeoLocation.java        Lat/lon coordinate
-│   │   ├── ByteTrie.java           Trie for byte-sequence lookup
-│   │   ├── ByteConvert.java        Byte conversion utilities
-│   │   ├── ByteUtil.java           Byte utilities
-│   │   ├── StringUtil.java         String utilities
-│   │   ├── StreamUtil.java         Stream utilities
-│   │   ├── DateUtil.java           Date utilities
-│   │   ├── Charsets.java           Charset constants
-│   │   ├── Iterables.java          Iterable utilities
-│   │   ├── KeyValuePair.java       Generic key-value pair
-│   │   ├── NullOutputStream.java   /dev/null output stream
-│   │   ├── CompoundException.java  Multiple-exception wrapper
-│   │   ├── BufferBoundsException.java
-│   │   └── annotations/            @NotNull, @Nullable, @SuppressWarnings
-│   │
-│   └── tools/                        CLI utilities
-│       ├── ProcessAllImagesInFolderUtility.java  Batch process images
-│       ├── ProcessUrlUtility.java               Process image from URL
-│       ├── ExtractJpegSegmentTool.java          Extract raw JPEG segments
-│       └── FileUtil.java                        File helper methods
-│
-└── com/adobe/internal/xmp/           Adobe XMP Toolkit (Java)
-    ├── XMPMeta.java                  XMP metadata interface
-    ├── XMPMetaFactory.java           Factory for XMP instances
-    ├── XMPUtils.java                 XMP utility functions
-    ├── XMPConst.java                 XMP namespace constants
-    ├── XMPPathFactory.java           XMP path construction
-    ├── XMPSchemaRegistry.java        Schema registry interface
-    ├── XMPIterator.java              Iterator interface
-    ├── XMPDateTime.java              Date/time interface
-    ├── XMPDateTimeFactory.java       Date/time factory
-    ├── XMPException.java             XMP exception
-    ├── XMPError.java                 Error codes
-    ├── XMPVersionInfo.java           Version info interface
-    ├── impl/                         Internal implementation
-    │   ├── XMPMetaImpl.java
-    │   ├── XMPMetaParser.java
-    │   ├── XMPNode.java
-    │   ├── XMPNodeUtils.java
-    │   ├── XMPNormalizer.java
-    │   ├── XMPUtilsImpl.java
-    │   ├── XMPIteratorImpl.java
-    │   ├── XMPSchemaRegistryImpl.java
-    │   ├── XMPSerializerRDF.java
-    │   ├── XMPSerializerPlain.java
-    │   ├── XMPSerializerHelper.java
-    │   ├── XMPDateTimeImpl.java
-    │   ├── ParseRDF.java
-    │   ├── ParsePlainXMP.java
-    │   ├── ISO8601Converter.java
-    │   ├── Latin1Converter.java
-    │   ├── ByteBuffer.java
-    │   ├── Base64.java
-    │   ├── Utils.java
-    │   ├── QName.java
-    │   ├── ParameterAsserts.java
-    │   ├── CountOutputStream.java
-    │   ├── FixASCIIControlsReader.java
-    │   └── xpath/                    XPath expression support
-    ├── properties/                   Property interfaces
-    ├── options/                      Option classes (serialize, parse, iterate)
-    └── utils/                        XML stream writer
+├── Main.java                              Standalone entry point (simple version)
+├── Authorship Concerns                    Notes file
+├── science/
+│   └── public.key                         Local public key for security validation
+├── com/mearvk/imaging/
+│   └── ImageMetadataReader.java           Self-contained JPEG/TIFF EXIF parser
+├── pennywise/
+│   ├── config.xml                         XML configuration (paths, types, security, AI)
+│   ├── Main.java                          Full-featured entry point (XML-driven)
+│   ├── XMLHandler.java                    Parses config.xml
+│   └── EntertainmentHandler.java          Polls GitHub, sends to Ollama AI
+├── security/
+│   ├── ExceptionHandler.java             Logging to exceptions/exceptions.log, 40MB rotation
+│   ├── SecurityHandler.java              Validates local vs remote public key
+│   └── CertificateHandler.java           TLS cert extraction from Apple/Disney, iCloud contact
+└── exceptions/
+    ├── exceptions.log                     Runtime log (auto-created)
+    └── archive/                           Rotated logs >40MB (.gitignored)
 
-SUPPORTED FORMATS
------------------
-Images: JPEG, PNG, TIFF, BMP, GIF, PSD, EPS, ICO, PCX, WebP, HEIF/HEIC, RAF
-Video:  MP4, MOV/QuickTime, AVI
-Audio:  MP3, WAV
+CONFIGURATION (pennywise/config.xml)
+------------------------------------
+- <source>          Input folder path
+- <destinations>    Output folders for images and video subtypes
+- <filetypes>       Recognized extensions for images and videos
+- <security>        Local/remote public key paths
+- <entertainment>   GitHub poll URL, ratio, Ollama endpoint/model
 
-PROGRAM FLOW (Main.java)
--------------------------
-1. Redirect stdout/stderr to log files
-2. Create destination directories for MOV and MP4 files
-3. ImageOpener scans initial_directory:
-   - .MOV files → copied to MOV folder, originals deleted
-   - .MP4 files → copied to MP4 folder, originals deleted
-   - Other files → collected for metadata processing
-4. ImageSorter processes remaining files:
-   - Reads EXIF DateTimeOriginal from each image
-   - Renames files to "iPhone_13_file_DD-MM-YYYY.jpg"
-   - Sorts by date chronologically
-   - Copies with new names, deletes originals
+HOW TO RUN
+----------
+Standalone (simple):
+  javac -sourcepath src -d out src/Main.java src/com/mearvk/imaging/ImageMetadataReader.java
+  java -cp out Main
+
+Full (XML-configured):
+  javac -sourcepath src -d out src/pennywise/Main.java src/pennywise/XMLHandler.java \
+    src/pennywise/EntertainmentHandler.java src/security/ExceptionHandler.java \
+    src/security/SecurityHandler.java src/security/CertificateHandler.java \
+    src/com/mearvk/imaging/ImageMetadataReader.java
+  java -cp out pennywise.Main src/pennywise/config.xml
+
+BUILDING A JAVA GUI WITH KIRO
+==============================
+
+Kiro is an AI coding assistant available right now. It can build a full Swing or
+JavaFX GUI for this program in minutes. Here's how to ask:
+
+STEP 1: Install Kiro
+  - Available at: https://kiro.dev
+  - Free tier available — affordable for individual developers
+  - Works in your terminal or IDE immediately
+
+STEP 2: Ask Kiro to build the GUI
+  Copy and paste one of these prompts into Kiro:
+
+  PROMPT A (Simple Swing GUI):
+  "Build a Java Swing GUI in src/gui/MainWindow.java that:
+   - Has a file chooser to select the source folder
+   - Has fields for image and video destination paths
+   - Shows a progress bar during file processing
+   - Displays a log area showing moved files
+   - Has Start/Stop buttons
+   - Loads and saves settings from pennywise/config.xml
+   Wire it to call pennywise.Main logic."
+
+  PROMPT B (JavaFX with preview):
+  "Build a JavaFX GUI in src/gui/ that shows:
+   - A table of discovered files with thumbnails
+   - Checkboxes to select which files to move
+   - Drag-and-drop for the source folder
+   - A settings panel that edits config.xml visually
+   - Real-time log output in a text area
+   Use the existing ImageMetadataReader and XMLHandler classes."
+
+  PROMPT C (Dashboard):
+  "Create a Java Swing dashboard in src/gui/ that shows:
+   - Total images/videos found and processed
+   - Security status (key validation pass/fail)
+   - Entertainment output from Ollama
+   - Exception log viewer with search
+   - Configuration editor
+   Make it launch from a new gui.Main class."
+
+STEP 3: Kiro will:
+  - Read your existing source files to understand the architecture
+  - Generate the GUI code that integrates with your existing classes
+  - Compile and verify the code works
+  - Explain how to run it
+
+WHY KIRO
+--------
+  - Available online NOW at https://kiro.dev
+  - Free tier for personal use
+  - Understands your entire codebase in context
+  - Writes, compiles, and tests code in one conversation
+  - Works with any Java version including Java 21
+  - No subscription lock-in — pay only for what you use
