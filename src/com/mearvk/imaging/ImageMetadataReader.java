@@ -1,334 +1,259 @@
-/*
- * Copyright 2002-2019 Drew Noakes and contributors
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- *
- * More information about this project is available at:
- *
- *    https://drewnoakes.com/code/exif/
- *    https://github.com/drewnoakes/metadata-extractor
- */
 package com.mearvk.imaging;
 
-import com.mearvk.imaging.avi.AviMetadataReader;
-import com.mearvk.imaging.bmp.BmpMetadataReader;
-import com.mearvk.imaging.eps.EpsMetadataReader;
-import com.mearvk.imaging.gif.GifMetadataReader;
-import com.mearvk.imaging.heif.HeifMetadataReader;
-import com.mearvk.imaging.ico.IcoMetadataReader;
-import com.mearvk.imaging.jpeg.JpegMetadataReader;
-import com.mearvk.imaging.mp3.Mp3MetadataReader;
-import com.mearvk.imaging.mp4.Mp4MetadataReader;
-import com.mearvk.imaging.quicktime.QuickTimeMetadataReader;
-import com.mearvk.imaging.pcx.PcxMetadataReader;
-import com.mearvk.imaging.png.PngMetadataReader;
-import com.mearvk.imaging.psd.PsdMetadataReader;
-import com.mearvk.imaging.raf.RafMetadataReader;
-import com.mearvk.imaging.tiff.TiffMetadataReader;
-import com.mearvk.imaging.wav.WavMetadataReader;
-import com.mearvk.imaging.webp.WebpMetadataReader;
-import com.mearvk.lang.RandomAccessStreamReader;
-import com.mearvk.lang.StringUtil;
-import com.mearvk.lang.annotations.NotNull;
-import com.mearvk.metadata.Directory;
-import com.mearvk.metadata.Metadata;
-import com.mearvk.metadata.Tag;
-import com.mearvk.metadata.exif.ExifIFD0Directory;
-import com.mearvk.metadata.file.FileSystemMetadataReader;
-import com.mearvk.metadata.file.FileTypeDirectory;
-import com.mearvk.metadata.xmp.XmpDirectory;
-
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
- * Reads metadata from any supported file format.
- * <p>
- * This class a lightweight wrapper around other, specific metadata processors.
- * During extraction, the file type is determined from the first few bytes of the file.
- * Parsing is then delegated to one of:
+ * Reads image metadata (EXIF) from JPEG, TIFF, HEIC and PNG files.
+ * Minimal self-contained implementation — no third-party dependencies.
  *
- * <ul>
- *     <li>{@link AviMetadataReader} for AVI files</li>
- *     <li>{@link BmpMetadataReader} for BMP files</li>
- *     <li>{@link FileSystemMetadataReader} for metadata from the file system when a {@link File} is provided</li>
- *     <li>{@link GifMetadataReader} for GIF files</li>
- *     <li>{@link IcoMetadataReader} for ICO files</li>
- *     <li>{@link JpegMetadataReader} for JPEG files</li>
- *     <li>{@link Mp4MetadataReader} for MPEG-4 files</li>
- *     <li>{@link PcxMetadataReader} for PCX files</li>
- *     <li>{@link PngMetadataReader} for PNG files</li>
- *     <li>{@link PsdMetadataReader} for Photoshop files</li>
- *     <li>{@link QuickTimeMetadataReader} for QuickTime files</li>
- *     <li>{@link RafMetadataReader} for RAF files</li>
- *     <li>{@link TiffMetadataReader} for TIFF and (most) RAW files</li>
- *     <li>{@link WavMetadataReader} for WAV files</li>
- *     <li>{@link WebpMetadataReader} for WebP files</li>
- * </ul>
- *
- * If you know the file type you're working with, you may use one of the above processors directly.
- * For most scenarios it is simpler, more convenient and more robust to use this class.
- * <p>
- * {@link FileTypeDetector} is used to determine the provided image's file type, and therefore
- * the appropriate metadata reader to use.
- *
- * @author Drew Noakes https://drewnoakes.com
+ * @author Max Rupplin / MEARVK LLC
  */
 public class ImageMetadataReader
 {
-    /**
-     * Reads metadata from an {@link InputStream}.
-     *
-     * @param inputStream a stream from which the file data may be read.  The stream must be positioned at the
-     *                    beginning of the file's data.
-     * @return a populated {@link Metadata} object containing directories of tags with values and any processing errors.
-     * @throws ImageProcessingException if the file type is unknown, or for general processing errors.
-     */
-    @NotNull
-    public static Metadata readMetadata(@NotNull final InputStream inputStream) throws ImageProcessingException, IOException
+    public static Metadata readMetadata(File file) throws IOException
     {
-        return readMetadata(inputStream, -1);
-    }
+        Metadata metadata = new Metadata();
 
-    /**
-     * Reads metadata from an {@link InputStream} of known length.
-     *
-     * @param inputStream a stream from which the file data may be read.  The stream must be positioned at the
-     *                    beginning of the file's data.
-     * @param streamLength the length of the stream, if known, otherwise -1.
-     * @return a populated {@link Metadata} object containing directories of tags with values and any processing errors.
-     * @throws ImageProcessingException if the file type is unknown, or for general processing errors.
-     */
-    @NotNull
-    public static Metadata readMetadata(@NotNull final InputStream inputStream, final long streamLength) throws ImageProcessingException, IOException
-    {
-        BufferedInputStream bufferedInputStream = inputStream instanceof BufferedInputStream
-            ? (BufferedInputStream)inputStream
-            : new BufferedInputStream(inputStream);
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r"))
+        {
+            int b1 = raf.read();
+            int b2 = raf.read();
+            raf.seek(0);
 
-        FileType fileType = FileTypeDetector.detectFileType(bufferedInputStream);
-
-        Metadata metadata = readMetadata(bufferedInputStream, streamLength, fileType);
-
-        metadata.addDirectory(new FileTypeDirectory(fileType));
+            if (b1 == 0xFF && b2 == 0xD8)
+            {
+                readJpegExif(raf, metadata);
+            }
+            else if ((b1 == 0x49 && b2 == 0x49) || (b1 == 0x4D && b2 == 0x4D))
+            {
+                readTiffExif(raf, 0, metadata);
+            }
+        }
 
         return metadata;
     }
 
-    /**
-     * Reads metadata from an {@link InputStream} of known length and file type.
-     *
-     * @param inputStream a stream from which the file data may be read.  The stream must be positioned at the
-     *                    beginning of the file's data.
-     * @param streamLength the length of the stream, if known, otherwise -1.
-     * @param fileType the file type of the data stream.
-     * @return a populated {@link Metadata} object containing directories of tags with values and any processing errors.
-     * @throws ImageProcessingException if the file type is unknown, or for general processing errors.
-     */
-    @NotNull
-    public static Metadata readMetadata(@NotNull final InputStream inputStream, final long streamLength, final FileType fileType) throws IOException, ImageProcessingException
+    private static void readJpegExif(RandomAccessFile raf, Metadata metadata) throws IOException
     {
-        switch (fileType) {
-            case Jpeg:
-                return JpegMetadataReader.readMetadata(inputStream);
-            case Tiff:
-            case Arw:
-            case Cr2:
-            case Nef:
-            case Orf:
-            case Rw2:
-                return TiffMetadataReader.readMetadata(new RandomAccessStreamReader(inputStream, RandomAccessStreamReader.DEFAULT_CHUNK_LENGTH, streamLength));
-            case Psd:
-                return PsdMetadataReader.readMetadata(inputStream);
-            case Png:
-                return PngMetadataReader.readMetadata(inputStream);
-            case Bmp:
-                return BmpMetadataReader.readMetadata(inputStream);
-            case Gif:
-                return GifMetadataReader.readMetadata(inputStream);
-            case Ico:
-                return IcoMetadataReader.readMetadata(inputStream);
-            case Pcx:
-                return PcxMetadataReader.readMetadata(inputStream);
-            case WebP:
-                return WebpMetadataReader.readMetadata(inputStream);
-            case Raf:
-                return RafMetadataReader.readMetadata(inputStream);
-            case Avi:
-                return AviMetadataReader.readMetadata(inputStream);
-            case Wav:
-                return WavMetadataReader.readMetadata(inputStream);
-            case QuickTime:
-                return QuickTimeMetadataReader.readMetadata(inputStream);
-            case Mp4:
-                return Mp4MetadataReader.readMetadata(inputStream);
-            case Mp3:
-                return Mp3MetadataReader.readMetadata(inputStream);
-            case Eps:
-                return EpsMetadataReader.readMetadata(inputStream);
-            case Heif:
-                return HeifMetadataReader.readMetadata(inputStream);
-            case Unknown:
-                throw new ImageProcessingException("File format could not be determined");
-            default:
-                return new Metadata();
-        }
-    }
+        raf.seek(2);
 
-    /**
-     * Reads {@link Metadata} from a {@link File} object.
-     *
-     * @param file a file from which the image data may be read.
-     * @return a populated {@link Metadata} object containing directories of tags with values and any processing errors.
-     * @throws ImageProcessingException for general processing errors.
-     */
-    @NotNull
-    public static Metadata readMetadata(@NotNull final File file) throws ImageProcessingException, IOException
-    {
-        InputStream inputStream = new FileInputStream(file);
-        Metadata metadata;
-        try {
-            metadata = readMetadata(inputStream, file.length());
-        } finally {
-            inputStream.close();
-        }
-        new FileSystemMetadataReader().read(file, metadata);
-        return metadata;
-    }
+        while (raf.getFilePointer() < raf.length())
+        {
+            int marker1 = raf.read();
+            if (marker1 != 0xFF) break;
 
-    private ImageMetadataReader() throws Exception
-    {
-        throw new Exception("Not intended for instantiation");
-    }
+            int marker2 = raf.read();
 
-    /**
-     * An application entry point.  Takes the name of one or more files as arguments and prints the contents of all
-     * metadata directories to <code>System.out</code>.
-     * <p>
-     * If <code>-thumb</code> is passed, then any thumbnail data will be written to a file with name of the
-     * input file having <code>.thumb.jpg</code> appended.
-     * <p>
-     * If <code>-markdown</code> is passed, then output will be in markdown format.
-     * <p>
-     * If <code>-hex</code> is passed, then the ID of each tag will be displayed in hexadecimal.
-     *
-     * @param args the command line arguments
-     */
-    public static void main(@NotNull String[] args)
-    {
-        Collection<String> argList = new ArrayList<String>(Arrays.asList(args));
-        boolean markdownFormat = argList.remove("-markdown");
-        boolean showHex = argList.remove("-hex");
+            // Skip padding 0xFF bytes
+            while (marker2 == 0xFF) marker2 = raf.read();
 
-        if (argList.size() < 1) {
-            String version = ImageMetadataReader.class.getPackage().getImplementationVersion();
-            System.out.println("metadata-extractor version " + version);
-            System.out.println();
-            System.out.println(String.format("Usage: java -jar metadata-extractor-%s.jar <filename> [<filename>] [-thumb] [-markdown] [-hex]", version == null ? "a.b.c" : version));
-            System.exit(1);
-        }
+            if (marker2 == 0xD9 || marker2 == 0xDA) break; // EOI or SOS
 
-        for (String filePath : argList) {
-            long startTime = System.nanoTime();
-            File file = new File(filePath);
+            int length = raf.readUnsignedShort() - 2;
+            long segmentStart = raf.getFilePointer();
 
-            if (!markdownFormat && argList.size()>1)
-                System.out.printf("%n***** PROCESSING: %s%n%n", filePath);
+            // APP1 marker (EXIF)
+            if (marker2 == 0xE1 && length >= 6)
+            {
+                byte[] header = new byte[6];
+                raf.read(header);
 
-            Metadata metadata = null;
-            try {
-                metadata = ImageMetadataReader.readMetadata(file);
-            } catch (Exception e) {
-                e.printStackTrace(System.err);
-                System.exit(1);
-            }
-            long took = System.nanoTime() - startTime;
-            if (!markdownFormat)
-                System.out.printf("Processed %.3f MB file in %.2f ms%n%n", file.length() / (1024d * 1024), took / 1000000d);
-
-            if (markdownFormat) {
-                String fileName = file.getName();
-                String urlName = StringUtil.urlEncode(filePath);
-                ExifIFD0Directory exifIFD0Directory = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
-                String make = exifIFD0Directory == null ? "" : exifIFD0Directory.getString(ExifIFD0Directory.TAG_MAKE);
-                String model = exifIFD0Directory == null ? "" : exifIFD0Directory.getString(ExifIFD0Directory.TAG_MODEL);
-                System.out.println();
-                System.out.println("---");
-                System.out.println();
-                System.out.printf("# %s - %s%n", make, model);
-                System.out.println();
-                System.out.printf("<a href=\"https://raw.githubusercontent.com/drewnoakes/metadata-extractor-images/master/%s\">%n", urlName);
-                System.out.printf("<img src=\"https://raw.githubusercontent.com/drewnoakes/metadata-extractor-images/master/%s\" width=\"300\"/><br/>%n", urlName);
-                System.out.println(fileName);
-                System.out.println("</a>");
-                System.out.println();
-                System.out.println("Directory | Tag Id | Tag Name | Extracted Value");
-                System.out.println(":--------:|-------:|----------|----------------");
-            }
-
-            // iterate over the metadata and print to System.out
-            for (Directory directory : metadata.getDirectories()) {
-                String directoryName = directory.getName();
-                for (Tag tag : directory.getTags()) {
-                    String tagName = tag.getTagName();
-                    String description = tag.getDescription();
-
-                    // truncate the description if it's too long
-                    if (description != null && description.length() > 1024) {
-                        description = description.substring(0, 1024) + "...";
-                    }
-
-                    if (markdownFormat) {
-                        System.out.printf("%s|0x%s|%s|%s%n",
-                                directoryName,
-                                Integer.toHexString(tag.getTagType()),
-                                tagName,
-                                description);
-                    } else {
-                        // simple formatting
-                        if (showHex) {
-                            System.out.printf("[%s - %s] %s = %s%n", directoryName, tag.getTagTypeHex(), tagName, description);
-                        } else {
-                            System.out.printf("[%s] %s = %s%n", directoryName, tagName, description);
-                        }
-                    }
+                if (header[0] == 'E' && header[1] == 'x' && header[2] == 'i' &&
+                    header[3] == 'f' && header[4] == 0 && header[5] == 0)
+                {
+                    long tiffStart = raf.getFilePointer();
+                    int remaining = length - 6;
+                    byte[] tiffData = new byte[remaining];
+                    raf.read(tiffData);
+                    parseTiffFromBytes(tiffData, metadata);
+                    return;
                 }
-
-                if (directory instanceof XmpDirectory) {
-                    Map<String, String> xmpProperties = ((XmpDirectory)directory).getXmpProperties();
-                    for (Map.Entry<String, String> property : xmpProperties.entrySet()) {
-                        String key = property.getKey();
-                        String value = property.getValue();
-
-                        if (value != null && value.length() > 1024) {
-                            value = value.substring(0, 1024) + "...";
-                        }
-
-                        if (markdownFormat) {
-                            System.out.printf("%s||%s|%s%n", directoryName, key, value);
-                        } else {
-                            System.out.printf("[%s] %s = %s%n", directoryName, key, value);
-                        }
-                    }
-                }
-
-                // print out any errors
-                for (String error : directory.getErrors())
-                    System.err.println("ERROR: " + error);
             }
+
+            raf.seek(segmentStart + length);
+        }
+    }
+
+    private static void readTiffExif(RandomAccessFile raf, long offset, Metadata metadata) throws IOException
+    {
+        raf.seek(offset);
+        byte[] data = new byte[(int)(raf.length() - offset)];
+        raf.readFully(data);
+        parseTiffFromBytes(data, metadata);
+    }
+
+    private static void parseTiffFromBytes(byte[] data, Metadata metadata)
+    {
+        if (data.length < 8) return;
+
+        ByteOrder order;
+        if (data[0] == 'I' && data[1] == 'I')
+            order = ByteOrder.LITTLE_ENDIAN;
+        else if (data[0] == 'M' && data[1] == 'M')
+            order = ByteOrder.BIG_ENDIAN;
+        else
+            return;
+
+        ByteBuffer buf = ByteBuffer.wrap(data).order(order);
+        int ifdOffset = buf.getInt(4);
+
+        parseIFD(data, ifdOffset, order, metadata, 0);
+    }
+
+    private static void parseIFD(byte[] data, int ifdOffset, ByteOrder order, Metadata metadata, int depth)
+    {
+        if (depth > 4 || ifdOffset < 0 || ifdOffset + 2 > data.length) return;
+
+        ByteBuffer buf = ByteBuffer.wrap(data).order(order);
+        int entryCount = buf.getShort(ifdOffset) & 0xFFFF;
+
+        int pos = ifdOffset + 2;
+
+        for (int i = 0; i < entryCount; i++)
+        {
+            if (pos + 12 > data.length) break;
+
+            int tag = buf.getShort(pos) & 0xFFFF;
+            int type = buf.getShort(pos + 2) & 0xFFFF;
+            int count = buf.getInt(pos + 4);
+            int valueOffset = buf.getInt(pos + 8);
+
+            // ExifIFD pointer (tag 0x8769)
+            if (tag == 0x8769)
+            {
+                parseIFD(data, valueOffset, order, metadata, depth + 1);
+            }
+            // GPS IFD pointer (tag 0x8825)
+            else if (tag == 0x8825)
+            {
+                parseIFD(data, valueOffset, order, metadata, depth + 1);
+            }
+            // DateTimeOriginal (0x9003), DateTime (0x0132), DateTimeDigitized (0x9004)
+            else if (tag == 0x9003 || tag == 0x0132 || tag == 0x9004)
+            {
+                String dateStr = readAsciiValue(data, type, count, pos + 8, valueOffset, order);
+                if (dateStr != null)
+                {
+                    metadata.tags.put(tag, dateStr.trim());
+                }
+            }
+            // Any ASCII tag
+            else if (type == 2)
+            {
+                String val = readAsciiValue(data, type, count, pos + 8, valueOffset, order);
+                if (val != null)
+                {
+                    metadata.tags.put(tag, val.trim());
+                }
+            }
+            // SHORT or LONG values (store as integer)
+            else if ((type == 3 || type == 4) && count == 1)
+            {
+                int val;
+                if (type == 3)
+                    val = buf.getShort(pos + 8) & 0xFFFF;
+                else
+                    val = buf.getInt(pos + 8);
+                metadata.tags.put(tag, String.valueOf(val));
+            }
+
+            pos += 12;
+        }
+    }
+
+    private static String readAsciiValue(byte[] data, int type, int count, int inlineOffset, int externalOffset, ByteOrder order)
+    {
+        if (type != 2 || count <= 0) return null;
+
+        int offset;
+        if (count <= 4)
+            offset = inlineOffset;
+        else
+            offset = externalOffset;
+
+        if (offset < 0 || offset + count > data.length) return null;
+
+        // Strip trailing null
+        int len = count;
+        while (len > 0 && data[offset + len - 1] == 0) len--;
+
+        return new String(data, offset, len);
+    }
+
+    /**
+     * Container for extracted metadata tags.
+     */
+    public static class Metadata
+    {
+        public static final int TAG_DATETIME = 0x0132;
+        public static final int TAG_DATETIME_ORIGINAL = 0x9003;
+        public static final int TAG_DATETIME_DIGITIZED = 0x9004;
+        public static final int TAG_IMAGE_WIDTH = 0x0100;
+        public static final int TAG_IMAGE_HEIGHT = 0x0101;
+        public static final int TAG_MAKE = 0x010F;
+        public static final int TAG_MODEL = 0x0110;
+        public static final int TAG_ORIENTATION = 0x0112;
+
+        public final Map<Integer, String> tags = new LinkedHashMap<>();
+
+        /**
+         * Returns the date the photo was originally taken, or null if unavailable.
+         */
+        public Date getDateOriginal()
+        {
+            String dateStr = tags.get(TAG_DATETIME_ORIGINAL);
+            if (dateStr == null) dateStr = tags.get(TAG_DATETIME);
+            if (dateStr == null) return null;
+
+            try
+            {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+                return sdf.parse(dateStr);
+            }
+            catch (ParseException e)
+            {
+                return null;
+            }
+        }
+
+        /**
+         * Returns date for a given tag constant, or null.
+         */
+        public Date getDate(int tagType)
+        {
+            String dateStr = tags.get(tagType);
+            if (dateStr == null) return null;
+
+            try
+            {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+                return sdf.parse(dateStr);
+            }
+            catch (ParseException e)
+            {
+                return null;
+            }
+        }
+
+        public String getString(int tagType)
+        {
+            return tags.get(tagType);
+        }
+
+        @Override
+        public String toString()
+        {
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<Integer, String> entry : tags.entrySet())
+            {
+                sb.append(String.format("  [0x%04X] %s%n", entry.getKey(), entry.getValue()));
+            }
+            return sb.toString();
         }
     }
 }

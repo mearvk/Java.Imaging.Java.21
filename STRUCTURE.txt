@@ -1,0 +1,187 @@
+STRUCTURE.txt - Java.Imaging.Java.21
+=====================================
+
+Project: Image/Video Metadata Extractor and Photo Organizer
+Language: Java 21
+Build: IntelliJ IDEA module (no Maven/Gradle)
+License: Apache 2.0 (metadata-extractor library by Drew Noakes)
+Author: Max Rupplin / MEARVK LLC
+
+OVERVIEW
+--------
+A photo/video organization tool that:
+1. Scans a directory for image and video files
+2. Moves .MOV files to a dedicated MOV folder
+3. Moves .MP4 files to a dedicated MP4 folder
+4. Reads EXIF metadata (date taken) from remaining image files
+5. Renames and sorts images chronologically by their EXIF date
+6. Copies renamed files and deletes originals
+
+The project incorporates a fork/adaptation of Drew Noakes' metadata-extractor
+library (repackaged under com.mearvk) and Adobe's XMP Toolkit.
+
+SOURCE TREE
+-----------
+src/
+├── Main.java                          Entry point; ImageOpener + ImageSorter inner classes
+├── QuickSort.java                     QuickSort utility for java.util.Date arrays
+│
+├── com/mearvk/
+│   ├── imaging/                       Image processing & format readers
+│   │   ├── ImageMetadataReader.java   Unified metadata reader (dispatches by file type)
+│   │   ├── FileType.java             Supported file type enum
+│   │   ├── FileTypeDetector.java     Magic-byte file type detection
+│   │   ├── TypeChecker.java          Type checking interface
+│   │   ├── ImageProcessingException.java
+│   │   ├── PhotographicConversions.java
+│   │   ├── jpeg/                     JPEG segment parsing
+│   │   ├── png/                      PNG chunk parsing
+│   │   ├── tiff/                     TIFF/IFD parsing
+│   │   ├── bmp/                      BMP reader
+│   │   ├── gif/                      GIF reader
+│   │   ├── psd/                      Photoshop PSD reader
+│   │   ├── eps/                      EPS reader
+│   │   ├── ico/                      ICO reader
+│   │   ├── pcx/                      PCX reader
+│   │   ├── webp/                     WebP reader (RIFF-based)
+│   │   ├── heif/                     HEIF/HEIC reader
+│   │   ├── raf/                      Fujifilm RAF reader
+│   │   ├── mp4/                      MP4 container reader
+│   │   ├── mp3/                      MP3/MPEG audio reader
+│   │   ├── wav/                      WAV reader (RIFF-based)
+│   │   ├── avi/                      AVI reader (RIFF-based)
+│   │   ├── quicktime/                QuickTime/MOV reader
+│   │   └── riff/                     RIFF container parser (shared by WAV, AVI, WebP)
+│   │
+│   ├── metadata/                     Metadata model & format-specific directories
+│   │   ├── Metadata.java            Root container for all directories
+│   │   ├── Directory.java           Base class for tag directories
+│   │   ├── Tag.java                 Single metadata tag
+│   │   ├── TagDescriptor.java       Human-readable tag descriptions
+│   │   ├── Schema.java              Schema definitions
+│   │   ├── MetadataReader.java      Reader interface
+│   │   ├── MetadataException.java
+│   │   ├── ErrorDirectory.java
+│   │   ├── Face.java                Face detection data
+│   │   ├── Age.java                 Age data
+│   │   ├── StringValue.java         Charset-aware string wrapper
+│   │   ├── jpeg/                    JPEG-specific directories & descriptors
+│   │   ├── png/                     PNG-specific directories
+│   │   ├── tiff/                    TIFF handler
+│   │   ├── bmp/                     BMP header directory
+│   │   ├── gif/                     GIF directories (header, control, animation)
+│   │   ├── eps/                     EPS directory
+│   │   ├── ico/                     ICO directory
+│   │   ├── pcx/                     PCX directory
+│   │   ├── webp/                    WebP directory
+│   │   ├── heif/                    HEIF directory & box parsers
+│   │   ├── mp4/                     MP4 box handler & media directories
+│   │   ├── mp3/                     MP3 directory
+│   │   ├── wav/                     WAV directory
+│   │   ├── avi/                     AVI directory
+│   │   ├── mov/                     QuickTime atom directories & handlers
+│   │   ├── exif/                    EXIF directories (IFD0, SubIFD, GPS, Thumbnail, etc.)
+│   │   │   └── makernotes/          Camera manufacturer-specific data (Nikon, Canon,
+│   │   │                            Olympus, Panasonic, Sony, Fujifilm, etc.)
+│   │   ├── iptc/                    IPTC/IIM directory
+│   │   ├── xmp/                     XMP directory & reader/writer
+│   │   ├── icc/                     ICC color profile directory
+│   │   ├── jfif/                    JFIF directory
+│   │   ├── jfxx/                    JFXX directory
+│   │   ├── photoshop/               Photoshop/PSD directories (Ducky, IRB)
+│   │   ├── adobe/                   Adobe JPEG marker directory
+│   │   ├── apple/                   Apple runtime metadata reader
+│   │   ├── plist/                   Binary plist reader
+│   │   └── file/                    File system metadata directory
+│   │
+│   ├── lang/                         Utility/support classes
+│   │   ├── SequentialReader.java    Abstract sequential byte reader
+│   │   ├── RandomAccessReader.java  Abstract random-access byte reader
+│   │   ├── ByteArrayReader.java     Byte array backed reader
+│   │   ├── StreamReader.java        InputStream backed sequential reader
+│   │   ├── RandomAccessStreamReader.java
+│   │   ├── RandomAccessFileReader.java
+│   │   ├── SequentialByteArrayReader.java
+│   │   ├── Rational.java           Rational number representation
+│   │   ├── GeoLocation.java        Lat/lon coordinate
+│   │   ├── ByteTrie.java           Trie for byte-sequence lookup
+│   │   ├── ByteConvert.java        Byte conversion utilities
+│   │   ├── ByteUtil.java           Byte utilities
+│   │   ├── StringUtil.java         String utilities
+│   │   ├── StreamUtil.java         Stream utilities
+│   │   ├── DateUtil.java           Date utilities
+│   │   ├── Charsets.java           Charset constants
+│   │   ├── Iterables.java          Iterable utilities
+│   │   ├── KeyValuePair.java       Generic key-value pair
+│   │   ├── NullOutputStream.java   /dev/null output stream
+│   │   ├── CompoundException.java  Multiple-exception wrapper
+│   │   ├── BufferBoundsException.java
+│   │   └── annotations/            @NotNull, @Nullable, @SuppressWarnings
+│   │
+│   └── tools/                        CLI utilities
+│       ├── ProcessAllImagesInFolderUtility.java  Batch process images
+│       ├── ProcessUrlUtility.java               Process image from URL
+│       ├── ExtractJpegSegmentTool.java          Extract raw JPEG segments
+│       └── FileUtil.java                        File helper methods
+│
+└── com/adobe/internal/xmp/           Adobe XMP Toolkit (Java)
+    ├── XMPMeta.java                  XMP metadata interface
+    ├── XMPMetaFactory.java           Factory for XMP instances
+    ├── XMPUtils.java                 XMP utility functions
+    ├── XMPConst.java                 XMP namespace constants
+    ├── XMPPathFactory.java           XMP path construction
+    ├── XMPSchemaRegistry.java        Schema registry interface
+    ├── XMPIterator.java              Iterator interface
+    ├── XMPDateTime.java              Date/time interface
+    ├── XMPDateTimeFactory.java       Date/time factory
+    ├── XMPException.java             XMP exception
+    ├── XMPError.java                 Error codes
+    ├── XMPVersionInfo.java           Version info interface
+    ├── impl/                         Internal implementation
+    │   ├── XMPMetaImpl.java
+    │   ├── XMPMetaParser.java
+    │   ├── XMPNode.java
+    │   ├── XMPNodeUtils.java
+    │   ├── XMPNormalizer.java
+    │   ├── XMPUtilsImpl.java
+    │   ├── XMPIteratorImpl.java
+    │   ├── XMPSchemaRegistryImpl.java
+    │   ├── XMPSerializerRDF.java
+    │   ├── XMPSerializerPlain.java
+    │   ├── XMPSerializerHelper.java
+    │   ├── XMPDateTimeImpl.java
+    │   ├── ParseRDF.java
+    │   ├── ParsePlainXMP.java
+    │   ├── ISO8601Converter.java
+    │   ├── Latin1Converter.java
+    │   ├── ByteBuffer.java
+    │   ├── Base64.java
+    │   ├── Utils.java
+    │   ├── QName.java
+    │   ├── ParameterAsserts.java
+    │   ├── CountOutputStream.java
+    │   ├── FixASCIIControlsReader.java
+    │   └── xpath/                    XPath expression support
+    ├── properties/                   Property interfaces
+    ├── options/                      Option classes (serialize, parse, iterate)
+    └── utils/                        XML stream writer
+
+SUPPORTED FORMATS
+-----------------
+Images: JPEG, PNG, TIFF, BMP, GIF, PSD, EPS, ICO, PCX, WebP, HEIF/HEIC, RAF
+Video:  MP4, MOV/QuickTime, AVI
+Audio:  MP3, WAV
+
+PROGRAM FLOW (Main.java)
+-------------------------
+1. Redirect stdout/stderr to log files
+2. Create destination directories for MOV and MP4 files
+3. ImageOpener scans initial_directory:
+   - .MOV files → copied to MOV folder, originals deleted
+   - .MP4 files → copied to MP4 folder, originals deleted
+   - Other files → collected for metadata processing
+4. ImageSorter processes remaining files:
+   - Reads EXIF DateTimeOriginal from each image
+   - Renames files to "iPhone_13_file_DD-MM-YYYY.jpg"
+   - Sorts by date chronologically
+   - Copies with new names, deletes originals

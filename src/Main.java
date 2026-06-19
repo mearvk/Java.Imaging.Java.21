@@ -1,303 +1,155 @@
 /**
- * @author Max Rupplin
- * @date April 4 2016
- * @date Nov. 21st 2721
+ * @author Max Rupplin / MEARVK LLC
  *
- * @us.governor Caesar Bernini
+ * iPhone Photo/Video Organizer:
+ * - Scans a source folder of mixed iPhone media
+ * - Moves VIDEO files (.mov, .mp4, .mpeg, .mpg, .avi) to a Videos/ destination
+ * - Moves IMAGE files (.jpg, .jpeg, .heic, .png, .tiff, .bmp, .gif) to an Images/ destination
+ * - Renames all files by date (EXIF for images, lastModified fallback)
+ *   so that alphabetical order = chronological order
+ * - Format: YYYY-MM-DD_HH-mm-ss_NNN.ext (NNN = sequence to prevent collisions)
  */
 
 import com.mearvk.imaging.ImageMetadataReader;
-import com.mearvk.metadata.exif.MetadataReader;
-import com.mearvk.metadata.Directory;
-import com.mearvk.metadata.Metadata;
-import com.mearvk.metadata.Tag;
-import com.mearvk.imaging.FileTypeDetector;
+import com.mearvk.imaging.ImageMetadataReader.Metadata;
 
-import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.Date;
 import java.io.File;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.io.PrintStream;
-import java.io.FileOutputStream;
-import java.util.HashMap;
-import java.util.TreeMap;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class Main
 {
-    static final String std_output_directory = "/home/mearvk/Desktop/Photos/std.output.txt";
+    static final String source_directory = "/home/mearvk/Desktop/Photos";
+    static final String images_destination = "/home/mearvk/Desktop/Organized/Images";
+    static final String videos_destination = "/home/mearvk/Desktop/Organized/Videos";
 
-    static final String err_output_directory = "/home/mearvk/Desktop/Photos/err.output.txt";
+    static final Set<String> VIDEO_EXTENSIONS = Set.of(
+        ".mov", ".mp4", ".mpeg", ".mpg", ".avi", ".m4v"
+    );
 
-    static final String initial_directory = "/home/mearvk/Desktop/Photos";
+    static final Set<String> IMAGE_EXTENSIONS = Set.of(
+        ".jpg", ".jpeg", ".heic", ".png", ".tiff", ".tif", ".bmp", ".gif", ".webp"
+    );
 
-    static final String mov_destination = "/home/mearvk/Desktop/Videos/MOVs";
-
-    static final String mp4_destination = "/home/mearvk/Desktop/Videos/MP4s";
-
-    static ArrayList<File> image_and_video_files = new ArrayList<>();
-
-    static ArrayList<ImageSorter.ImageCollection> image_collection = new ArrayList<>();
-
-    static ArrayList<ImageSorter.ImageCollection> image_collection_sorted = new ArrayList<>();
-
-    public static void main(String...args)
+    public static void main(String... args)
     {
-        Object object = null;
+        String src = args.length > 0 ? args[0] : source_directory;
 
-        try{ System.setOut(new PrintStream(new FileOutputStream(std_output_directory))); } catch (Exception e) {}
+        new File(images_destination).mkdirs();
+        new File(videos_destination).mkdirs();
 
-        try{ System.setErr(new PrintStream(new FileOutputStream(err_output_directory))); } catch (Exception e) {}
-
-        try{ new File("/home/mearvk/Desktop/Videos/MOVs").mkdir(); } catch (Exception e) {}
-
-        try{ new File("/home/mearvk/Desktop/Videos/MP4s").mkdir(); } catch (Exception e) {}
-
-        ImageOpener opener = new ImageOpener(Main.initial_directory);
-
-        ImageSorter sorter = new ImageSorter(Main.image_collection);
-
-        sorter.collection();
-
-        sorter.sort();
-
-        sorter.finalize();
-    }
-
-    public static class ImageSorter
-    {
-        public ArrayList<ImageCollection> image_collection = new ArrayList<ImageCollection>();
-
-        public static class Date implements Comparable<Date>
+        File base = new File(src);
+        File[] files = base.listFiles();
+        if (files == null)
         {
-            protected java.util.Date date;
-
-            public Date(java.util.Date date)
-            {
-                this.date = date;
-            }
-
-            protected String next_file_name;
-
-            protected File next_file;
-
-            @Override
-            public int compareTo(Date date)
-            {
-                return this.date.compareTo(date.date);
-            }
+            System.err.println("Cannot list directory: " + src);
+            return;
         }
 
-        public static class ImageCollection
+        ArrayList<MediaEntry> entries = new ArrayList<>();
+
+        for (File file : files)
         {
-            protected String file_name;
+            if (file.isDirectory()) continue;
 
-            protected File file;
+            String ext = getExtension(file.getName()).toLowerCase();
+            boolean isVideo = VIDEO_EXTENSIONS.contains(ext);
+            boolean isImage = IMAGE_EXTENSIONS.contains(ext);
 
-            protected Date file_date;
-
-            protected java.util.Date _file_date;
-
-            public ImageCollection(String file_name, File file, Date file_date)
+            if (!isVideo && !isImage)
             {
-                this.file_name = file_name;
-
-                this.file = file;
-
-                this.file_date = file_date;
+                System.out.println("Skipped (unknown type): " + file.getName());
+                continue;
             }
 
-            public ImageCollection(String file_name, File file, java.util.Date file_date)
-            {
-                this.file_name = file_name;
+            Date date = null;
 
-                this.file = file;
-
-                this._file_date = file_date;
-            }
-        }
-
-        public ImageSorter(ArrayList<ImageCollection> image_collection)
-        {
-            this.image_collection = this.image_collection;
-
-            for (ImageCollection collection : this.image_collection)
+            // Try EXIF date for images
+            if (isImage)
             {
                 try
                 {
-                    File file = collection.file;
-
-                    String file_name = collection.file_name;
-
-                    Date file_date = collection.file_date;
-
-                    Metadata data = ImageMetadataReader.readMetadata(file);
-
-                    Iterable <Directory> directories =  data.getDirectories();
-
-                    System.out.println("File name >> "+file.getAbsolutePath());
-
-                    for(Directory directory : directories)
-                    {
-                        System.out.println("\t"+directory);
-
-                        Iterable <Tag> tags = directory.getTags();
-
-                        for(Tag tag : tags)
-                        {
-                            System.out.println("\t\t >> "+tag);
-                        }
-                    }
+                    Metadata metadata = ImageMetadataReader.readMetadata(file);
+                    date = metadata.getDateOriginal();
                 }
                 catch (Exception e)
                 {
-                    e.printStackTrace(System.err);
+                    // Fall through to lastModified
                 }
             }
-        }
 
-        public void collection()
-        {
-            Integer number_of_files = this.image_collection.size();
-
-            for(int i=0; i<number_of_files; i++)
+            // Fallback: file last-modified time
+            if (date == null)
             {
-                try
-                {
-                    Metadata data = ImageMetadataReader.readMetadata(this.image_collection.get(i).file);
-
-                    MetadataReader reader = data.getFirstDirectoryOfType(MetadataReader.class);
-
-                    java.util.Date file_date = reader.getDate(MetadataReader.TAG_DATETIME_ORIGINAL);
-
-                    String file_name = "iPhone_13_file_"+new SimpleDateFormat("dd-MM-yyyy").format(file_date)+".jpg";
-
-                    Main.image_collection.add(new ImageCollection(file_name, this.image_collection.get(i).file, file_date));
-                }
-                catch (Exception e)
-                {
-                    e.printStackTrace(System.err);
-                }
-            }
-        }
-
-        public void sort()
-        {
-            ArrayList<Date> sorted_dates = new ArrayList<>();
-
-            for(int i=0; i<Main.image_collection.size(); i++)
-            {
-                ImageCollection collection = Main.image_collection.get(i);
-
-                Date file_date = collection.file_date;
-
-                file_date.next_file_name = collection.file_name;
-
-                file_date.next_file = collection.file;
-
-                sorted_dates.add(file_date);
+                long mod = file.lastModified();
+                if (mod > 0) date = new Date(mod);
             }
 
-            Collections.sort(sorted_dates);
+            if (date == null) date = new Date(); // last resort
 
-            for(int i=0; i<sorted_dates.size(); i++)
-            {
-                ImageCollection collection = Main.image_collection.get(i);
-
-                Date date = sorted_dates.get(i);
-
-                collection.file_date = date;
-
-                collection.file = date.next_file;
-
-                collection.file_name = date.next_file_name;
-
-                Main.image_collection_sorted.add(collection);
-            }
+            entries.add(new MediaEntry(file, date, isVideo, ext));
         }
 
-        public void finalize()
+        // Sort all by date
+        entries.sort(Comparator.comparing(e -> e.date));
+
+        // Rename and move, using sequence numbers to avoid collisions
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        Map<String, Integer> nameCount = new HashMap<>();
+
+        int movedImages = 0, movedVideos = 0;
+
+        for (MediaEntry entry : entries)
         {
+            String baseName = fmt.format(entry.date);
+
+            // Append sequence if duplicate timestamp
+            int seq = nameCount.getOrDefault(baseName + entry.ext, 0) + 1;
+            nameCount.put(baseName + entry.ext, seq);
+
+            String newName = baseName + "_" + String.format("%03d", seq) + entry.ext;
+            String destDir = entry.isVideo ? videos_destination : images_destination;
+            Path dest = Path.of(destDir, newName);
+
             try
             {
-                for(ImageCollection collection : Main.image_collection_sorted)
-                {
-                    File file = collection.file;
+                Files.copy(entry.file.toPath(), dest);
+                Files.delete(entry.file.toPath());
+                System.out.println(entry.file.getName() + " -> " + destDir + "/" + newName);
 
-                    String file_name = collection.file_name;
-
-                    System.out.println(Path.of(file.getParent()+"/"+file_name));
-
-                    Files.copy(file.toPath(), Path.of(file.getParent()+"/"+file_name));
-
-                    Files.delete(file.toPath());
-                }
+                if (entry.isVideo) movedVideos++;
+                else movedImages++;
             }
             catch (Exception e)
             {
-                e.printStackTrace(System.err);
+                System.err.println("Failed: " + entry.file.getName() + " - " + e.getMessage());
             }
         }
+
+        System.out.println("Done. Images: " + movedImages + ", Videos: " + movedVideos);
     }
 
-    public static class ImageOpener
+    private static String getExtension(String filename)
     {
-        public ArrayList<File> images = new ArrayList<File>();
+        int dot = filename.lastIndexOf('.');
+        return dot >= 0 ? filename.substring(dot) : "";
+    }
 
-        public ImageOpener(String url)
+    static class MediaEntry
+    {
+        final File file;
+        final Date date;
+        final boolean isVideo;
+        final String ext;
+
+        MediaEntry(File file, Date date, boolean isVideo, String ext)
         {
-            File base = new File(url);
-
-            File[] file_list = base.listFiles();
-
-            for (File file : file_list)
-            {
-                if(file.getName().toLowerCase().endsWith(".mov"))
-                {
-                    try
-                    {
-                        System.out.println("Moving [MOV] >> " + file.getAbsolutePath());
-
-                        Files.copy(file.getAbsoluteFile().toPath(), Path.of(Main.mov_destination + "/" + file.getName()));
-
-                        Files.delete(file.getAbsoluteFile().toPath());
-                    }
-                    catch (Exception e)
-                    {
-                        if (e instanceof FileAlreadyExistsException)
-                        {
-                            System.out.println("System >> " + Main.mov_destination + "/" + file.getName());
-                        }
-                        else e.printStackTrace(System.err);
-                    }
-                }
-                else if(file.getName().toLowerCase().endsWith(".mp4"))
-                {
-                        try
-                        {
-                            System.out.println("Moving [MP4] >> " + file.getAbsolutePath());
-
-                            Files.copy(file.getAbsoluteFile().toPath(), Path.of(Main.mp4_destination + "/" + file.getName()));
-
-                            Files.delete(file.getAbsoluteFile().toPath());
-                        }
-                        catch (Exception e)
-                        {
-                            if (e instanceof FileAlreadyExistsException)
-                            {
-                                System.out.println("System >> " + Main.mp4_destination + "/" + file.getName());
-                            }
-                            else e.printStackTrace(System.err);
-                        }
-                }
-                else
-                {
-                    Main.image_and_video_files.add(file);
-                }
-            }
+            this.file = file;
+            this.date = date;
+            this.isVideo = isVideo;
+            this.ext = ext;
         }
     }
 }
