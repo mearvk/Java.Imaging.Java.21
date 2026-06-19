@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <source>/home/mearvk/Desktop/Photos</source>
+
+    <destinations>
+        <images>/home/mearvk/Desktop/Organized/Images</images>
+        <videos>
+            <mov>/home/mearvk/Desktop/Organized/Videos/MOVs</mov>
+            <mp4>/home/mearvk/Desktop/Organized/Videos/MP4s</mp4>
+            <mpeg>/home/mearvk/Desktop/Organized/Videos/MPEGs</mpeg>
+            <avi>/home/mearvk/Desktop/Organized/Videos/AVIs</avi>
+        </videos>
+    </destinations>
+
+    <filetypes>
+        <images>.jpg,.jpeg,.heic,.png,.tiff,.tif,.bmp,.gif,.webp</images>
+        <videos>.mov,.mp4,.mpeg,.mpg,.avi,.m4v</videos>
+    </filetypes>
+</config>
