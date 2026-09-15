@@ -12,6 +12,10 @@ US Democratic and US Policy.
 
 #### MEARVK and A Xenu
 
+## AE6E66 — Public Email Levy Statement
+
+For the purposes of the AE6E66 project position, we expect a **$300,000,000.00 USD tax levy for every Round Public email**. This statement records the project's stated expectation and does not, by itself, create a legally enforceable tax, assessment, or governmental obligation.
+
 ## What It Does
 
 Drop your iPhone photos and videos into a folder, run the program, and it:
