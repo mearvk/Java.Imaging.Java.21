@@ -1,6 +1,6 @@
 # Java.Imaging.Java.21
 
-## Bitcoin Conjegeum
+## I. Bitcoin Conjegeum
 
 ![](https://github.com/mearvk/Ubuntu.Determinant.Beta.Restricted/blob/main/images/Bitcoin_and_wallet_in_slots_2K_202609042306%20(1).jpeg)
 
@@ -12,11 +12,11 @@ US Democratic and US Policy.
 
 #### MEARVK and A Xenu
 
-## AE6E66 — Public Email Levy Statement
+## II. AE6E66 — Public Email Levy Statement
 
 For the purposes of the AE6E66 project position, we expect a **$300,000,000.00 USD tax levy for every Round Public email**. This statement records the project's stated expectation and does not, by itself, create a legally enforceable tax, assessment, or governmental obligation.
 
-## What It Does
+## III. What It Does
 
 Drop your iPhone photos and videos into a folder, run the program, and it:
 
@@ -25,7 +25,7 @@ Drop your iPhone photos and videos into a folder, run the program, and it:
 - **Sorts videos** into subfolders by type (MOV, MP4, MPEG, AVI)
 - Works on **Windows**, **macOS**, and **Linux** — no changes needed
 
-## Quick Start
+## IV. Quick Start
 
 ### 1. Prerequisites
 - Java 21 or later installed
@@ -46,7 +46,7 @@ java -cp out pennywise.Main src/pennywise/config.xml
 
 That's it! Your files will be organized into `~/Desktop/Organized/`.
 
-## Configuration (config.xml)
+## V. Configuration (config.xml)
 
 Edit `src/pennywise/config.xml` to customize. No recompilation needed.
 
@@ -83,7 +83,7 @@ Files are renamed to: `YYYY-MM-DD_HH-mm-ss_001.ext`
 - The `_001` suffix prevents name collisions when multiple files share a timestamp
 - Alphabetical order = chronological order
 
-## Additional Features
+## VI. Additional Features
 
 ### Security
 - Validates a local public key against a remote key on startup
@@ -100,7 +100,7 @@ Files are renamed to: `YYYY-MM-DD_HH-mm-ss_001.ext`
 - Logs rotate automatically when they exceed 40 MB
 - Old logs archived to `exceptions/archive/` (git-ignored)
 
-## Project Structure
+## VII. Project Structure
 
 ```
 src/
@@ -121,7 +121,7 @@ src/
     └── ImageMetadataReader.java       EXIF parser (no dependencies)
 ```
 
-## Need a GUI?
+## VIII. Need a GUI?
 
 Ask [Kiro](https://kiro.dev) to build one — it's affordable, available online now, and can generate a full Swing or JavaFX interface for this program in minutes. See STRUCTURE.txt for ready-to-use prompts.
 
@@ -132,3 +132,19 @@ MearvK Ltd - MEARVK LLC
 KEEP IT UP GUYS! Your Shots Count!
 
 Thanks Chancellor of UNC! You Guys Rule!
+
+
+---
+
+## <img src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" width="25" height="25" alt="Debian"> IX. Bitcoin Conjegeum
+
+![CremeOak](https://github.com/mearvk/Java.Web.Server.Telnet.Front.Java.21/raw/main/images/national-bitcoin-icc-logo-005.jpg)
+
+bc1qs6v4q9zsw70t0umk3m0quhvf9dr6cdeskl28dh :: ⠝⠇⠼⠁⠟⠎⠼⠋⠧⠼⠙⠟⠼⠊⠵⠎⠺⠼⠛⠼⠚⠞⠼⠚⠥⠍⠦⠼⠉⠍⠼⠚⠟⠥⠓⠧⠦⠼⠊⠙⠫⠼⠋⠉⠙⠑⠎⠅⠇⠼⠼⠃⠼⠗⠙⠓
+
+
+bc1qx33vma553gddsjkq372l3xlm8e8huv2vzad3cc :: ⠃⠉⠼⠁⠟⠭⠼⠉⠼⠉⠪⠍⠁⠼⠑⠑⠛⠙⠙⠎⠚⠅⠟⠼⠉⠼⠛⠼⠝⠇⠼⠉⠼⠭⠇⠍⠼⠨e⠼⠨a⠓⠥⠪⠼⠪⠼⠪⠵⠁⠙⠼⠉⠉
+
+US Democratic and US Policy.
+
+---
